@@ -1,5 +1,6 @@
 import AuthBackground from '@/components/AuthBackground';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Check, Copy, HeartHandshake, Link as LinkIcon, Lock, QrCode } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
@@ -11,6 +12,7 @@ type ConnectionState = 'idle' | 'selecting_method' | 'generated_secret' | 'waiti
 
 export default function Connection() {
   const router = useRouter();
+  const { userData } = useAuthStore();
   const [showWelcome, setShowWelcome] = useState(true);
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [inviteMode, setInviteMode] = useState<'code' | 'link' | null>(null);
@@ -157,9 +159,9 @@ export default function Connection() {
         {showWelcome && (
           <Animated.View style={[styles.overlay, { opacity: welcomeOpacity }]}>
             <Text style={styles.welcomeSub}>SETUP COMPLETE</Text>
-            <Text style={styles.welcomeMain}>Welcome to your private space.</Text>
+            <Text style={styles.welcomeMain}>Welcome, {userData?.name || 'User'}</Text>
             <Text style={styles.welcomeDesc}>
-              You can now connect to your partner to have a great private experience free from external noise.
+              Goal: {userData?.intent || 'Deep Connection'}. You can now connect to your partner to have a great private experience free from external noise.
             </Text>
           </Animated.View>
         )}
@@ -177,6 +179,9 @@ export default function Connection() {
                 {connectionState === 'waiting' && 'RADAR ACTIVE'}
                 {connectionState === 'detected' && 'PARTNER FOUND'}
                 {connectionState === 'locked' && 'CONNECTION SECURED'}
+              </Text>
+              <Text style={styles.identityText}>
+                {userData?.name || 'User'} • Seek {userData?.intent || 'Connection'}
               </Text>
             </View>
 
@@ -420,6 +425,7 @@ const styles = StyleSheet.create({
   statusHeader: { alignItems: 'center', marginTop: SPACING.md },
   statusLabel: { color: COLOR_PALETTE.textMuted, fontSize: 11, letterSpacing: 2, fontWeight: '800' },
   statusValue: { color: COLOR_PALETTE.primary, fontSize: 14, fontWeight: '700', marginTop: 4, letterSpacing: 1 },
+  identityText: { color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 6, fontWeight: '600' },
 
   radarZone: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   ring: {

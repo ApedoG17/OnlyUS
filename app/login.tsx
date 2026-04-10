@@ -34,7 +34,7 @@ export default function Login() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      login();
+      login({ name: email.split('@')[0] || 'User', intent: 'Deep Connection' });
       Alert.alert('Welcome Back!', 'Successfully signed in to your private space.');
       router.replace('/' as any);
     }, 1500);

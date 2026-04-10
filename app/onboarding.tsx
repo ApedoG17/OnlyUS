@@ -65,7 +65,7 @@ export default function Onboarding() {
     // Submit to backend simulation
     setTimeout(() => {
       setLoading(false);
-      login();
+      login({ name: username, intent: intent });
       Alert.alert('All Set!', 'Your private profile is ready.');
       router.replace('/' as any);
     }, 1500);

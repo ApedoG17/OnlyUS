@@ -214,14 +214,14 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xxl,
   },
 
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.xl,
-    paddingTop: 60,
+    paddingTop: 20, /* Reduced padding since Expo might be handling status bars */
     paddingBottom: SPACING.lg,
+    zIndex: 999, /* Ensure header and dropdown sit strictly above page content */
   },
   logoRow: {
     flexDirection: 'row',
