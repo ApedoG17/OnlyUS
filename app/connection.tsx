@@ -352,7 +352,7 @@ export default function Connection() {
                   <Text style={styles.actionDesc}>
                     Your private world is now ready for both of you. 
                   </Text>
-                  <TouchableOpacity style={styles.enterBtn}>
+                  <TouchableOpacity style={styles.enterBtn} onPress={() => router.push('/(tabs)' as any)}>
                     <Text style={styles.enterText}>Enter The Vault →</Text>
                   </TouchableOpacity>
                 </>
