@@ -36,7 +36,7 @@ export default function Login() {
       setLoading(false);
       login();
       Alert.alert('Welcome Back!', 'Successfully signed in to your private space.');
-      router.replace('/connection' as any);
+      router.replace('/' as any);
     }, 1500);
   };
 

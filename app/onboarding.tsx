@@ -67,7 +67,7 @@ export default function Onboarding() {
       setLoading(false);
       login();
       Alert.alert('All Set!', 'Your private profile is ready.');
-      router.replace('/connection' as any);
+      router.replace('/' as any);
     }, 1500);
   };
 

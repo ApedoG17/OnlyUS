@@ -1,6 +1,6 @@
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { FontAwesome } from '@expo/vector-icons';
-import { Globe, Mail } from 'lucide-react-native';
+import { Globe, Link2, LogOut, Mail, User } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
 import SplashScreen from '@/components/SplashScreen';
@@ -34,8 +34,9 @@ const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function Index() {
   const [isSplashDone, setIsSplashDone] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const router = useRouter();
-  const isSignedIn = useAuthStore((state) => state.isSignedIn);
+  const { isSignedIn, logout } = useAuthStore();
 
   const handleEnterCode = () => {
     if (isSignedIn) {
@@ -57,9 +58,34 @@ export default function Index() {
             <Image source={require('../assets/images/logo.jpg')} style={styles.logoIcon} resizeMode="contain" />
             <Text style={styles.logoText}>OnlyUs.</Text>
           </View>
-          <TouchableOpacity style={styles.headerBtn} onPress={() => router.push('/register' as any)}>
-            <Text style={styles.headerBtnText}>Get Started</Text>
-          </TouchableOpacity>
+          {isSignedIn ? (
+            <View style={{ zIndex: 100 }}>
+              <TouchableOpacity 
+                style={styles.profileBtn} 
+                onPress={() => setShowProfileMenu(!showProfileMenu)}
+              >
+                <User color="#FAFAFA" size={20} />
+              </TouchableOpacity>
+              
+              {showProfileMenu && (
+                <View style={styles.dropdownMenu}>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileMenu(false); router.push('/connection' as any); }}>
+                    <Link2 color="#FAFAFA" size={16} />
+                    <Text style={styles.dropdownText}>Connection Node</Text>
+                  </TouchableOpacity>
+                  <View style={styles.dropdownDivider} />
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileMenu(false); logout(); }}>
+                    <LogOut color="#FF5E5E" size={16} />
+                    <Text style={[styles.dropdownText, { color: '#FF5E5E' }]}>Log Out</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.headerBtn} onPress={() => router.push('/register' as any)}>
+              <Text style={styles.headerBtnText}>Get Started</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Hero ── */}
@@ -75,8 +101,11 @@ export default function Index() {
                 OnlyUs is a private, relationship-focused mobile app designed exclusively for two. A secure and emotionally engaging digital space where couples communicate, build memories, and grow — without external distractions.
               </Text>
               <View style={styles.heroActions}>
-                <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/register' as any)}>
-                  <Text style={styles.primaryBtnTxt}>Begin Journey</Text>
+                <TouchableOpacity 
+                  style={styles.primaryBtn} 
+                  onPress={() => router.push((isSignedIn ? '/connection' : '/register') as any)}
+                >
+                  <Text style={styles.primaryBtnTxt}>{isSignedIn ? 'Resume Connection' : 'Begin Journey'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.ghostBtn} onPress={handleEnterCode}>
                   <Text style={styles.ghostBtnTxt}>Enter Code →</Text>
@@ -221,6 +250,47 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '800',
     fontSize: 14,
+  },
+  profileBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: RADIUS.full,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 50,
+    right: 0,
+    backgroundColor: 'rgba(30, 20, 45, 0.95)',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.sm,
+    width: 200,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+    gap: SPACING.md,
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    marginHorizontal: SPACING.sm,
+  },
+  dropdownText: {
+    color: '#FAFAFA',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Hero
