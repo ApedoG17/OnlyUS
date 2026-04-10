@@ -2,6 +2,7 @@ import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { FontAwesome } from '@expo/vector-icons';
 import { Globe, Mail } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '@/store/useAuthStore';
 import SplashScreen from '@/components/SplashScreen';
 import BuildReflect from '@/components/sections/BuildReflect';
 import CTABanner from '@/components/sections/CTABanner';
@@ -34,6 +35,15 @@ const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 export default function Index() {
   const [isSplashDone, setIsSplashDone] = useState(false);
   const router = useRouter();
+  const isSignedIn = useAuthStore((state) => state.isSignedIn);
+
+  const handleEnterCode = () => {
+    if (isSignedIn) {
+      router.push('/enter-code' as any);
+    } else {
+      router.push('/register' as any);
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -68,7 +78,7 @@ export default function Index() {
                 <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/register' as any)}>
                   <Text style={styles.primaryBtnTxt}>Begin Journey</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.ghostBtn}>
+                <TouchableOpacity style={styles.ghostBtn} onPress={handleEnterCode}>
                   <Text style={styles.ghostBtnTxt}>Enter Code →</Text>
                 </TouchableOpacity>
               </View>

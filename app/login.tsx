@@ -1,4 +1,5 @@
 import AuthBackground from '@/components/AuthBackground';
+import { useAuthStore } from '@/store/useAuthStore';
 import { RADIUS, SPACING } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
@@ -20,6 +21,7 @@ const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function Login() {
   const router = useRouter();
+  const login = useAuthStore((state) => state.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,8 +34,9 @@ export default function Login() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
+      login();
       Alert.alert('Welcome Back!', 'Successfully signed in to your private space.');
-      // router.replace('/(tabs)');
+      router.replace('/connection' as any);
     }, 1500);
   };
 

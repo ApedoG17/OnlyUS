@@ -1,5 +1,6 @@
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '@/store/useAuthStore';
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -7,6 +8,15 @@ const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function CTABanner() {
   const router = useRouter();
+  const isSignedIn = useAuthStore((state) => state.isSignedIn);
+
+  const handleEnterCode = () => {
+    if (isSignedIn) {
+      router.push('/enter-code' as any);
+    } else {
+      router.push('/register' as any);
+    }
+  };
   
   return (
     <View style={styles.container}>
@@ -23,7 +33,7 @@ export default function CTABanner() {
         <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/register' as any)}>
           <Text style={styles.primaryBtnText}>Begin Your Journey</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryBtn}>
+        <TouchableOpacity style={styles.secondaryBtn} onPress={handleEnterCode}>
           <Text style={styles.secondaryBtnText}>Enter Invite Code →</Text>
         </TouchableOpacity>
       </View>

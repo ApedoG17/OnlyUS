@@ -1,4 +1,5 @@
 import AuthBackground from '@/components/AuthBackground';
+import { useAuthStore } from '@/store/useAuthStore';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { default as React, useState } from 'react';
@@ -18,6 +19,7 @@ const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function Onboarding() {
   const router = useRouter();
+  const login = useAuthStore((state) => state.login);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -63,6 +65,7 @@ export default function Onboarding() {
     // Submit to backend simulation
     setTimeout(() => {
       setLoading(false);
+      login();
       Alert.alert('All Set!', 'Your private profile is ready.');
       router.replace('/connection' as any);
     }, 1500);
