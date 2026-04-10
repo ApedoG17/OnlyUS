@@ -1,7 +1,7 @@
 import AuthBackground from '@/components/AuthBackground';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Check, Copy, HeartHandshake, Link as LinkIcon, Lock, QrCode } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -12,9 +12,10 @@ type ConnectionState = 'idle' | 'selecting_method' | 'generated_secret' | 'waiti
 
 export default function Connection() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { userData } = useAuthStore();
   const [showWelcome, setShowWelcome] = useState(true);
-  const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
+  const [connectionState, setConnectionState] = useState<ConnectionState>((params.state as ConnectionState) || 'idle');
   const [inviteMode, setInviteMode] = useState<'code' | 'link' | null>(null);
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60);

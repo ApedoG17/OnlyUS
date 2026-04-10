@@ -31,7 +31,7 @@ export default function EnterCode() {
     setTimeout(() => {
       setLoading(false);
       Alert.alert('Connection Match!', 'Secure handshake established.');
-      router.replace('/connection' as any);
+      router.replace({ pathname: '/connection', params: { state: 'detected' } } as any);
     }, 1500);
   };
 
