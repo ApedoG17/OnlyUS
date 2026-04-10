@@ -1,6 +1,7 @@
 import AuthBackground from '@/components/AuthBackground';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
-import { Check, Copy, HeartHandshake, Link as LinkIcon, Lock, QrCode } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ArrowLeft, Check, Copy, HeartHandshake, Link as LinkIcon, Lock, QrCode } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -9,6 +10,7 @@ const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 type ConnectionState = 'idle' | 'selecting_method' | 'generated_secret' | 'waiting' | 'detected' | 'locked';
 
 export default function Connection() {
+  const router = useRouter();
   const [showWelcome, setShowWelcome] = useState(true);
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [inviteMode, setInviteMode] = useState<'code' | 'link' | null>(null);
@@ -112,6 +114,9 @@ export default function Connection() {
 
   const handleCopy = () => {
     setCopied(true);
+    if (connectionState === 'generated_secret') {
+      setConnectionState('waiting');
+    }
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -135,6 +140,16 @@ export default function Connection() {
             onPress={() => setConnectionState('detected')}
           >
             <Text style={{color: 'transparent'}}>DEV</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* ── Go Back Header ── */}
+        {!showWelcome && (
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => router.push('/')}
+          >
+            <ArrowLeft color="#FAFAFA" size={24} />
           </TouchableOpacity>
         )}
 
@@ -269,30 +284,42 @@ export default function Connection() {
                   </View>
 
                   <Text style={styles.actionDesc}>
-                    {copied 
-                      ? 'Copied to clipboard. Send it securely.'
-                      : 'Copy this secret and send it to your partner.'}
+                    Copy this secret to automatically activate the radar.
                   </Text>
 
                   <TouchableOpacity 
-                    style={styles.primaryBtn} 
-                    onPress={() => setConnectionState('waiting')}
+                    style={[styles.primaryBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }]} 
+                    onPress={() => setConnectionState('idle')}
                   >
-                    <Text style={styles.primaryBtnText}>Activate Radar Timer</Text>
+                    <Text style={[styles.primaryBtnText, { color: '#E0E0E0' }]}>Cancel Request</Text>
                   </TouchableOpacity>
                 </>
               )}
 
               {connectionState === 'waiting' && (
                 <>
-                  <Text style={styles.actionTitle}>Awaiting Partner</Text>
-                  <Text style={styles.actionDesc}>
-                    Link valid for 24 hours. Keep this node open or turn on notifications.
-                  </Text>
-                  <View style={styles.ghostVault}>
-                    <Lock color="rgba(255,255,255,0.2)" size={20} />
-                    <Text style={{color: 'rgba(255,255,255,0.4)', marginLeft: 8}}>Ecosystem locked until pairing</Text>
+                  <Text style={styles.actionTitle}>Radar Active</Text>
+
+                  <View style={styles.secretBox}>
+                    <Text style={styles.secretText}>{secretText}</Text>
+                    <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}>
+                      {copied ? <Check color="#1A9E6B" size={20} /> : <Copy color="#FAFAFA" size={20} />}
+                    </TouchableOpacity>
                   </View>
+
+                  <Text style={styles.actionDesc}>
+                    Broadcasting connection request. Valid for 24 hours.
+                  </Text>
+
+                  <TouchableOpacity 
+                    style={[styles.primaryBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#FF5E5E' }]} 
+                    onPress={() => {
+                      setConnectionState('idle');
+                      setTimeLeft(24 * 60 * 60);
+                    }}
+                  >
+                    <Text style={[styles.primaryBtnText, { color: '#FF5E5E' }]}>Cancel Request</Text>
+                  </TouchableOpacity>
                 </>
               )}
 
@@ -341,6 +368,18 @@ export default function Connection() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  backBtn: {
+    position: 'absolute',
+    top: 55,
+    left: 20,
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.full,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 90,
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(20, 5, 30, 0.95)',
@@ -499,5 +538,5 @@ const styles = StyleSheet.create({
   enterBtn: { width: '100%', height: 56, borderRadius: RADIUS.full, backgroundColor: '#1A9E6B', alignItems: 'center', justifyContent: 'center' },
   enterText: { color: '#111', fontWeight: '800', fontSize: 16 },
 
-  devTrigger: { position: 'absolute', top: 40, left: 20, width: 40, height: 40, zIndex: 999 }
+  devTrigger: { position: 'absolute', top: 110, left: 20, width: 40, height: 40, zIndex: 999 }
 });
