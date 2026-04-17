@@ -23,7 +23,7 @@ const LOG_DATA = [
 
 export default function Dashboard() {
   const [myMood, setMyMood] = useState<Mood>('connected');
-  const [partnerMood, setPartnerMood] = useState<Mood>('busy');
+  const [partnerMood, setPartnerMood] = useState<Mood>('connected');
 
   return (
     <AuthBackground>

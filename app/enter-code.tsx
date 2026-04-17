@@ -21,7 +21,7 @@ const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function EnterCode() {
   const router = useRouter();
-  const { userData } = useAuthStore();
+  const { userData, setConnectionData } = useAuthStore();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -44,12 +44,17 @@ export default function EnterCode() {
         throw new Error('Code not found or has expired.');
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError, data: updatedData } = await supabase
         .from('connections')
         .update({ guest_id: userData?.id, status: 'detected' })
-        .eq('id', data.id);
+        .eq('id', data.id)
+        .select()
+        .single();
 
       if (updateError) throw updateError;
+
+      // Guest successfully connected! Store context.
+      setConnectionData(data.id, data.host_id);
 
       setLoading(false);
       Alert.alert('Connection Match!', 'Secure handshake established.');

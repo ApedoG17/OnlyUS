@@ -2,7 +2,8 @@ import AuthBackground from '@/components/AuthBackground';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Camera, Image as ImageIcon, Mic, Send } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -24,40 +25,89 @@ type Message = {
   time: string;
 };
 
-const INITIAL_MESSAGES: Message[] = [
-  { id: '1', text: "Hey babe 💜 you there?", fromMe: false, time: '9:01 AM' },
-  { id: '2', text: "Always here for you 🤍", fromMe: true, time: '9:02 AM' },
-  { id: '3', text: "I was thinking about you all morning honestly", fromMe: false, time: '9:04 AM' },
-  { id: '4', text: "Same... this app feels so different from everything else. Finally just us.", fromMe: true, time: '9:05 AM' },
-  { id: '5', text: "Exactly. No noise. No distractions.", fromMe: false, time: '9:06 AM' },
-  { id: '6', text: "I love it 🔐", fromMe: true, time: '9:06 AM' },
-  { id: '7', text: "What are you doing tonight?", fromMe: false, time: '9:10 AM' },
-  { id: '8', text: "Hopefully spending it with you ✨", fromMe: true, time: '9:11 AM' },
-];
-
 export default function Chat() {
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const { userData } = useAuthStore();
 
-  const handleSend = () => {
+  const fetchMessages = async () => {
+    if (!userData?.connectionId) return;
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('connection_id', userData.connectionId)
+      .order('created_at', { ascending: true });
+    
+    if (data) {
+      setMessages(data.map(msg => ({
+        id: msg.id,
+        text: msg.text,
+        fromMe: msg.sender_id === userData.id,
+        time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      })));
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 200);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+    if (!userData?.connectionId) return;
+
+    const channel = supabase.channel(`chat-${userData.connectionId}`)
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `connection_id=eq.${userData.connectionId}` },
+        (payload) => {
+          const msg = payload.new;
+          const newMessage: Message = {
+            id: msg.id,
+            text: msg.text,
+            fromMe: msg.sender_id === userData.id,
+            time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          setMessages((prev) => {
+            if (prev.find(m => m.id === newMessage.id)) return prev;
+            return [...prev, newMessage];
+          });
+          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [userData?.connectionId]);
+
+  const handleSend = async () => {
     const trimmed = inputText.trim();
-    if (!trimmed) return;
+    if (!trimmed || !userData?.connectionId) return;
 
+    setInputText('');
     const now = new Date();
-    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
+    
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
       text: trimmed,
       fromMe: true,
-      time,
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
-
-    setMessages((prev) => [...prev, newMessage]);
-    setInputText('');
+    setMessages(prev => [...prev, optimisticMessage]);
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+    const { data, error } = await supabase.from('messages').insert([
+      { 
+        connection_id: userData.connectionId, 
+        sender_id: userData.id, 
+        text: trimmed 
+      }
+    ]).select().single();
+
+    if (error) {
+      console.error(error);
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+    } else {
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, ...{ id: data.id, time: new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } } : m));
+    }
   };
 
   const renderMessage = ({ item }: { item: Message }) => (
@@ -281,11 +331,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    paddingBottom: Platform.OS === 'ios' ? SPACING.xl : SPACING.md,
     backgroundColor: 'rgba(15, 5, 24, 0.95)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.06)',
     gap: SPACING.sm,
+    marginBottom: Platform.OS === 'ios' ? 88 : 70, // Hoist above absolute tab bar
   },
   consoleIcon: {
     width: 38,

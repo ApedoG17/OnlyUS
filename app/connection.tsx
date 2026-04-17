@@ -15,7 +15,7 @@ type ConnectionState = 'idle' | 'selecting_method' | 'generated_secret' | 'waiti
 export default function Connection() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { userData } = useAuthStore();
+  const { userData, setConnectionData } = useAuthStore();
   const [showWelcome, setShowWelcome] = useState(true);
   const [connectionState, setConnectionState] = useState<ConnectionState>((params.state as ConnectionState) || 'idle');
   const [inviteMode, setInviteMode] = useState<'code' | 'link' | null>(null);
@@ -38,7 +38,10 @@ export default function Connection() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'connections', filter: `invite_code=eq.${code}` },
         (payload) => {
-          if (payload.new.status === 'detected') setConnectionState('detected');
+          if (payload.new.status === 'detected') {
+            setConnectionState('detected');
+            setConnectionData(payload.new.id, payload.new.guest_id);
+          }
           if (payload.new.status === 'locked') setConnectionState('locked');
         }
       )
@@ -138,14 +141,23 @@ export default function Connection() {
     setConnectionState('generated_secret');
     setCopied(false);
 
+    const generateSafeCode = (len: number) => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < len; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return code;
+    };
+
     const generatedCode = mode === 'code' 
-      ? Math.random().toString(36).substring(2, 8).toUpperCase()
-      : `onlyus.app/invite/${Math.random().toString(36).substring(2, 8)}`;
+      ? generateSafeCode(6)
+      : `onlyus.app/invite/${generateSafeCode(6).toLowerCase()}`;
     setSecretText(generatedCode);
 
-    const { error } = await supabase.from('connections').insert([
+    const { error, data } = await supabase.from('connections').insert([
       { invite_code: generatedCode, host_id: userData?.id, status: 'waiting' }
-    ]);
+    ]).select().single();
     if (error) {
       console.error('Insert error:', error);
       Alert.alert('Database Error', 'Failed to save the generated code: ' + error.message);
@@ -547,9 +559,9 @@ const styles = StyleSheet.create({
   secretText: {
     color: COLOR_PALETTE.primary,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 4,
   },
   copyBtn: {
     padding: 8,
