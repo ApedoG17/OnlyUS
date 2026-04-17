@@ -4,7 +4,9 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Check, Copy, HeartHandshake, Link as LinkIcon, Lock, QrCode } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Easing, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { supabase } from '@/lib/supabase';
 
 const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
@@ -19,6 +21,7 @@ export default function Connection() {
   const [inviteMode, setInviteMode] = useState<'code' | 'link' | null>(null);
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60);
+  const [secretText, setSecretText] = useState('');
 
   // Animations
   const welcomeOpacity = useRef(new Animated.Value(0)).current;
@@ -29,7 +32,25 @@ export default function Connection() {
   
   const lockProgress = useRef(new Animated.Value(0)).current;
 
+  const listenToConnection = (code: string) => {
+    supabase.channel(`listen-${code}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'connections', filter: `invite_code=eq.${code}` },
+        (payload) => {
+          if (payload.new.status === 'detected') setConnectionState('detected');
+          if (payload.new.status === 'locked') setConnectionState('locked');
+        }
+      )
+      .subscribe();
+  };
+
   useEffect(() => {
+    if (params.inviteCode) {
+      setSecretText(params.inviteCode as string);
+      listenToConnection(params.inviteCode as string);
+    }
+
     Animated.timing(welcomeOpacity, {
       toValue: 1,
       duration: 1000,
@@ -92,9 +113,12 @@ export default function Connection() {
       toValue: 1,
       duration: 3000,
       useNativeDriver: false,
-    }).start(({ finished }) => {
+    }).start(async ({ finished }) => {
       if (finished) {
         setConnectionState('locked');
+        if (secretText) {
+          await supabase.from('connections').update({ status: 'locked' }).eq('invite_code', secretText);
+        }
       }
     });
   };
@@ -109,21 +133,35 @@ export default function Connection() {
     }
   };
 
-  const handleSelectMethod = (mode: 'code' | 'link') => {
+  const handleSelectMethod = async (mode: 'code' | 'link') => {
     setInviteMode(mode);
     setConnectionState('generated_secret');
     setCopied(false);
+
+    const generatedCode = mode === 'code' 
+      ? Math.random().toString(36).substring(2, 8).toUpperCase()
+      : `onlyus.app/invite/${Math.random().toString(36).substring(2, 8)}`;
+    setSecretText(generatedCode);
+
+    const { error } = await supabase.from('connections').insert([
+      { invite_code: generatedCode, host_id: userData?.id, status: 'waiting' }
+    ]);
+    if (error) {
+      console.error('Insert error:', error);
+      Alert.alert('Database Error', 'Failed to save the generated code: ' + error.message);
+    }
+
+    listenToConnection(generatedCode);
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     setCopied(true);
+    await Clipboard.setStringAsync(secretText);
     if (connectionState === 'generated_secret') {
       setConnectionState('waiting');
     }
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const secretText = inviteMode === 'code' ? '8F-29-XA' : 'onlyus.app/invite/8f29xa';
 
   const formatTime = (totalSeconds: number) => {
     const h = Math.floor(totalSeconds / 3600);

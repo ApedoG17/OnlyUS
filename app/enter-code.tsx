@@ -3,6 +3,8 @@ import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, KeyRound } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -19,20 +21,43 @@ const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function EnterCode() {
   const router = useRouter();
+  const { userData } = useAuthStore();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (code.length < 5) {
+    let cleanCode = code.trim().toUpperCase();
+    if (cleanCode.length < 5) {
       Alert.alert('Invalid Code', 'Please enter a valid unique code.');
       return;
     }
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const { data, error } = await supabase
+        .from('connections')
+        .select('*')
+        .eq('invite_code', cleanCode)
+        .single();
+
+      if (error || !data) {
+        throw new Error('Code not found or has expired.');
+      }
+
+      const { error: updateError } = await supabase
+        .from('connections')
+        .update({ guest_id: userData?.id, status: 'detected' })
+        .eq('id', data.id);
+
+      if (updateError) throw updateError;
+
       setLoading(false);
       Alert.alert('Connection Match!', 'Secure handshake established.');
-      router.replace({ pathname: '/connection', params: { state: 'detected' } } as any);
-    }, 1500);
+      router.replace({ pathname: '/connection', params: { state: 'detected', inviteCode: cleanCode } } as any);
+    } catch (e: any) {
+      setLoading(false);
+      Alert.alert('Connection Failed', e.message || 'Could not verify the code.');
+    }
   };
 
   return (
