@@ -1,6 +1,6 @@
 import { COLOR_PALETTE } from '@/constants/theme';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Image, StyleSheet, Text, View, Platform } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -23,12 +23,12 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         Animated.timing(contentFade, {
           toValue: 1,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(contentScale, {
           toValue: 1,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]),
       // 2. Pause: Let them admire the logo
@@ -37,7 +37,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       Animated.timing(overlayFade, {
         toValue: 0,
         duration: 800,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }),
     ]).start(() => {
       setIsVisible(false);
