@@ -33,7 +33,7 @@ const { width } = Dimensions.get('window');
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function Index() {
-  const [isSplashDone, setIsSplashDone] = useState(false);
+  const [isSplashDone, setIsSplashDone] = useState(Platform.OS === 'web');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const router = useRouter();
   const { isSignedIn, logout } = useAuthStore();

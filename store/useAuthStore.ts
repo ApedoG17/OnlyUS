@@ -21,7 +21,7 @@ const generateUUID = () => {
 interface AuthState {
   isSignedIn: boolean;
   userData: UserData | null;
-  login: (data?: UserData) => void;
+  login: (data?: Partial<UserData>) => void;
   logout: () => void;
   setUserData: (data: UserData) => void;
   setConnectionData: (connectionId: string, partnerId: string) => void;

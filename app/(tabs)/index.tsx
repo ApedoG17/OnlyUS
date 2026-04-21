@@ -1,12 +1,13 @@
 import AuthBackground from '@/components/AuthBackground';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 import { BellRing, CalendarHeart, Camera, Flame, Heart, Image as ImageIcon, MessageCircleHeart } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
-// Mock Data for Moods
 type Mood = 'connected' | 'busy' | 'need_space' | 'spicy';
 const MOOD_COLORS = {
   connected: '#1A9E6B', // Green
@@ -15,15 +16,108 @@ const MOOD_COLORS = {
   spicy: '#FF2A5F',     // Red/Pink
 };
 
-const LOG_DATA = [
-  { id: '1', user: 'Partner', action: 'changed mood to connected', time: '10 mins ago', icon: Heart },
-  { id: '2', user: 'You', action: 'dropped a photo in the Vault', time: '2 hours ago', icon: ImageIcon },
-  { id: '3', user: 'Partner', action: 'sent an urgent ping', time: 'Yesterday', icon: BellRing },
-];
+type ActivityLog = {
+  id: string;
+  user_name: string;
+  user_id: string;
+  action: string;
+  type: string;
+  created_at: string;
+};
 
 export default function Dashboard() {
+  const { userData } = useAuthStore();
   const [myMood, setMyMood] = useState<Mood>('connected');
   const [partnerMood, setPartnerMood] = useState<Mood>('connected');
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+
+  useEffect(() => {
+    if (!userData?.connectionId) return;
+
+    const fetchLogs = async () => {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .eq('connection_id', userData.connectionId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (data) {
+        setLogs(data);
+        
+        // Find latest moods
+        const myLatestMood = data.find(l => l.user_id === userData.id && l.type === 'mood_change');
+        if (myLatestMood) setMyMood(myLatestMood.action as Mood);
+        
+        const partnerLatestMood = data.find(l => l.user_id !== userData.id && l.type === 'mood_change');
+        if (partnerLatestMood) setPartnerMood(partnerLatestMood.action as Mood);
+      }
+    };
+
+    fetchLogs();
+
+    const channel = supabase.channel(`dashboard-${userData.connectionId}`)
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'activity_logs', filter: `connection_id=eq.${userData.connectionId}` },
+        (payload) => {
+          const newLog = payload.new as ActivityLog;
+          setLogs(prev => [newLog, ...prev].slice(0, 20));
+          
+          if (newLog.type === 'mood_change') {
+            if (newLog.user_id === userData.id) {
+              setMyMood(newLog.action as Mood);
+            } else {
+              setPartnerMood(newLog.action as Mood);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [userData?.connectionId, userData?.id]);
+
+  const insertLog = async (action: string, type: string) => {
+    if (!userData?.connectionId || !userData?.id) return;
+    
+    // Optimistic UI for mood
+    if (type === 'mood_change') {
+      setMyMood(action as Mood);
+    }
+
+    await supabase.from('activity_logs').insert([{
+      connection_id: userData.connectionId,
+      user_id: userData.id,
+      user_name: userData.name || 'User',
+      action,
+      type
+    }]);
+  };
+
+  const handleMoodToggle = () => {
+    const nextMood: Mood = myMood === 'connected' ? 'spicy' : (myMood === 'spicy' ? 'busy' : (myMood === 'busy' ? 'need_space' : 'connected'));
+    insertLog(nextMood, 'mood_change');
+  };
+
+  const getLogIcon = (type: string) => {
+    switch(type) {
+      case 'mood_change': return Heart;
+      case 'vault_drop': return ImageIcon;
+      case 'urgent_ping': return BellRing;
+      case 'kiss': return MessageCircleHeart;
+      case 'spicy_mode': return Flame;
+      default: return Heart;
+    }
+  };
+
+  const formatLogAction = (log: ActivityLog) => {
+    if (log.type === 'mood_change') return `changed mood to ${log.action.replace('_', ' ')}`;
+    return log.action;
+  };
+
+  const formatTime = (isoString: string) => {
+    return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
     <AuthBackground>
@@ -31,7 +125,7 @@ export default function Dashboard() {
         
         {/* ── Top Header ── */}
         <View style={styles.header}>
-          <Text style={styles.dateText}>FRIDAY, APRIL 10</Text>
+          <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}</Text>
           <Text style={styles.titleText}>OnlyUs.</Text>
         </View>
 
@@ -61,7 +155,7 @@ export default function Dashboard() {
           {/* User Ring */}
           <TouchableOpacity 
             style={styles.avatarBlock}
-            onPress={() => setMyMood(myMood === 'connected' ? 'spicy' : 'connected')}
+            onPress={handleMoodToggle}
             activeOpacity={0.8}
           >
             <View style={[styles.ringOuter, { borderColor: MOOD_COLORS[myMood] }]}>
@@ -80,17 +174,17 @@ export default function Dashboard() {
         {/* ── Quick Actions (Mixed) ── */}
         <View style={styles.actionsWrap}>
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity style={styles.actionCard} onPress={() => insertLog('sent a kiss', 'kiss')}>
               <MessageCircleHeart color="#FF2A5F" size={26} />
               <Text style={styles.actionLabel}>Send Kiss</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity style={styles.actionCard} onPress={() => insertLog('sent an urgent ping', 'urgent_ping')}>
               <BellRing color="#FF8A00" size={26} />
               <Text style={styles.actionLabel}>Urgent Ping</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity style={styles.actionCard} onPress={() => insertLog('opened the Vault', 'vault_drop')}>
               <Camera color={COLOR_PALETTE.primary} size={26} />
               <Text style={styles.actionLabel}>Drop Photo</Text>
             </TouchableOpacity>
@@ -101,7 +195,7 @@ export default function Dashboard() {
               <CalendarHeart color="#FAFAFA" size={22} />
               <Text style={styles.actionBannerText}>Set Next Date Idea</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBannerDark}>
+            <TouchableOpacity style={styles.actionBannerDark} onPress={() => insertLog('activated Spicy Mode', 'spicy_mode')}>
               <Flame color="#FF2A5F" size={22} />
               <Text style={styles.actionBannerTextDark}>Spicy Mode</Text>
             </TouchableOpacity>
@@ -113,19 +207,26 @@ export default function Dashboard() {
           <Text style={styles.sectionHeader}>CONNECTION LOG</Text>
           
           <View style={styles.logCard}>
-            {LOG_DATA.map((item, index) => (
-              <View key={item.id} style={[styles.logItem, index === LOG_DATA.length - 1 && styles.logItemLast]}>
-                <View style={styles.logIconBox}>
-                  <item.icon color={COLOR_PALETTE.primary} size={16} />
-                </View>
-                <View style={styles.logTextWrap}>
-                  <Text style={styles.logMainText}>
-                    <Text style={{ fontWeight: '800', color: '#FAFAFA' }}>{item.user}</Text> {item.action}
-                  </Text>
-                  <Text style={styles.logTimeText}>{item.time}</Text>
-                </View>
-              </View>
-            ))}
+            {logs.length === 0 ? (
+              <Text style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: 20 }}>No activity yet.</Text>
+            ) : (
+              logs.map((item, index) => {
+                const IconComponent = getLogIcon(item.type);
+                return (
+                  <View key={item.id} style={[styles.logItem, index === logs.length - 1 && styles.logItemLast]}>
+                    <View style={styles.logIconBox}>
+                      <IconComponent color={COLOR_PALETTE.primary} size={16} />
+                    </View>
+                    <View style={styles.logTextWrap}>
+                      <Text style={styles.logMainText}>
+                        <Text style={{ fontWeight: '800', color: '#FAFAFA' }}>{item.user_id === userData?.id ? 'You' : 'Partner'}</Text> {formatLogAction(item)}
+                      </Text>
+                      <Text style={styles.logTimeText}>{formatTime(item.created_at)}</Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
           </View>
         </View>
 

@@ -1,48 +1,171 @@
 import AuthBackground from '@/components/AuthBackground';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
+import { decode } from 'base64-arraybuffer';
+import * as ImagePicker from 'expo-image-picker';
 import { Lock, Plus, ShieldCheck } from 'lucide-react-native';
-import React from 'react';
-import { Dimensions, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Dimensions, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 
 const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const GRID_PADDING = SPACING.md;
 const ITEM_MARGIN = 2;
-// Calculate item width exactly: width minus container padding minus inner margins
 const ITEM_WIDTH = (width - (GRID_PADDING * 2) - (ITEM_MARGIN * 2 * COLUMN_COUNT)) / COLUMN_COUNT;
 
-// Mock Data
-const MOCK_MEDIA = [
-  { id: '1', url: 'https://images.unsplash.com/photo-1516589178581-6cd78532f115?auto=format&fit=crop&w=500&q=80', isLocked: false },
-  { id: '2', url: 'https://images.unsplash.com/photo-1534069814468-b80c102a96a0?auto=format&fit=crop&w=500&q=80', isLocked: false },
-  { id: '3', url: 'https://images.unsplash.com/photo-1522856339183-ecee8d7fbbfc?auto=format&fit=crop&w=500&q=80', isLocked: true },
-  { id: '4', url: 'https://images.unsplash.com/photo-1518598811802-bd90bba13143?auto=format&fit=crop&w=500&q=80', isLocked: false },
-  { id: '5', url: 'https://images.unsplash.com/photo-1560241088-7517c49392e6?auto=format&fit=crop&w=500&q=80', isLocked: false },
-  { id: '6', url: 'https://images.unsplash.com/photo-1581022295087-35e592704906?auto=format&fit=crop&w=500&q=80', isLocked: false },
-  { id: '7', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=500&q=80', isLocked: true },
-  { id: '8', url: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=500&q=80', isLocked: false },
-  { id: '9', url: 'https://images.unsplash.com/photo-1498429089284-41f8cf3ffd39?auto=format&fit=crop&w=500&q=80', isLocked: false },
-  { id: '10', url: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=500&q=80', isLocked: false },
-  { id: '11', url: 'https://images.unsplash.com/photo-1522856339183-ecee8d7fbbfc?auto=format&fit=crop&w=500&q=80', isLocked: false },
-  { id: '12', url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=500&q=80', isLocked: false },
-];
+type VaultMedia = {
+  id: string;
+  image_url: string;
+  is_locked: boolean;
+  uploader_id: string;
+  created_at: string;
+};
 
 export default function Vault() {
-  
-  const renderItem = ({ item }: { item: typeof MOCK_MEDIA[0] }) => (
-    <View style={styles.gridItem}>
-      {item.isLocked ? (
+  const { userData } = useAuthStore();
+  const [media, setMedia] = useState<VaultMedia[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    if (!userData?.connectionId) return;
+
+    const fetchMedia = async () => {
+      const { data, error } = await supabase
+        .from('vault_media')
+        .select('*')
+        .eq('connection_id', userData.connectionId)
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setMedia(data);
+      }
+    };
+
+    fetchMedia();
+
+    const channel = supabase.channel(`vault-${userData.connectionId}`)
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'vault_media', filter: `connection_id=eq.${userData.connectionId}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newMedia = payload.new as VaultMedia;
+            setMedia(prev => [newMedia, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as VaultMedia;
+            setMedia(prev => prev.map(m => m.id === updated.id ? updated : m));
+          } else if (payload.eventType === 'DELETE') {
+            const deleted = payload.old;
+            setMedia(prev => prev.filter(m => m.id !== deleted.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [userData?.connectionId]);
+
+  const handleUpload = async () => {
+    if (!userData?.connectionId || !userData?.id) return;
+
+    // Request permissions
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to upload images.');
+      return;
+    }
+
+    // Launch picker
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      if (!asset.base64) return;
+      
+      setIsUploading(true);
+      try {
+        const fileExt = asset.uri.split('.').pop() || 'jpg';
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${userData.connectionId}/${fileName}`;
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('vault')
+          .upload(filePath, decode(asset.base64), { contentType: `image/${fileExt}` });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage.from('vault').getPublicUrl(filePath);
+
+        // Insert into database
+        const { error: dbError } = await supabase.from('vault_media').insert([{
+          connection_id: userData.connectionId,
+          uploader_id: userData.id,
+          image_url: publicUrl,
+          is_locked: false // default false
+        }]);
+
+        if (dbError) throw dbError;
+        
+        // Optionally insert log
+        await supabase.from('activity_logs').insert([{
+          connection_id: userData.connectionId,
+          user_id: userData.id,
+          user_name: userData.name || 'User',
+          action: 'dropped a photo in the Vault',
+          type: 'vault_drop'
+        }]);
+        
+      } catch (err: any) {
+        console.error(err);
+        Alert.alert('Upload Failed', err.message || 'Something went wrong.');
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  const toggleLock = async (item: VaultMedia) => {
+    if (item.uploader_id !== userData?.id) {
+      Alert.alert('Locked', 'Only the uploader can unlock this media.');
+      return;
+    }
+    
+    // Optimistic UI
+    setMedia(prev => prev.map(m => m.id === item.id ? { ...m, is_locked: !m.is_locked } : m));
+    
+    const { error } = await supabase.from('vault_media').update({ is_locked: !item.is_locked }).eq('id', item.id);
+    if (error) {
+      // Revert on error
+      setMedia(prev => prev.map(m => m.id === item.id ? { ...m, is_locked: item.is_locked } : m));
+    }
+  };
+
+  const renderItem = ({ item }: { item: VaultMedia }) => (
+    <TouchableOpacity 
+      style={styles.gridItem} 
+      activeOpacity={0.9} 
+      onPress={() => toggleLock(item)}
+      onLongPress={() => toggleLock(item)}
+    >
+      {item.is_locked ? (
         <View style={styles.lockedContainer}>
-          <Image source={{ uri: item.url }} style={[styles.image, { blurRadius: 20 }]} />
+          <Image source={{ uri: item.image_url }} style={styles.image} blurRadius={40} />
           <View style={styles.lockedOverlay}>
             <Lock color="rgba(255,255,255,0.7)" size={24} />
           </View>
         </View>
       ) : (
-        <Image source={{ uri: item.url }} style={styles.image} />
+        <Image source={{ uri: item.image_url }} style={styles.image} />
       )}
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -63,18 +186,28 @@ export default function Vault() {
 
         {/* ── Media Grid ── */}
         <FlatList
-          data={MOCK_MEDIA}
+          data={media}
           keyExtractor={(item) => item.id}
           numColumns={COLUMN_COUNT}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <Text style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 100 }}>
+              No media in the Vault yet. Drop a photo!
+            </Text>
+          }
         />
 
         {/* ── FAB ── */}
-        <TouchableOpacity style={styles.fabOuter} activeOpacity={0.8}>
+        <TouchableOpacity 
+          style={[styles.fabOuter, isUploading && { opacity: 0.7 }]} 
+          activeOpacity={0.8}
+          onPress={handleUpload}
+          disabled={isUploading}
+        >
           <View style={styles.fabInner}>
-            <Plus color="#111" size={32} />
+            {isUploading ? <ActivityIndicator color="#111" /> : <Plus color="#111" size={32} />}
           </View>
         </TouchableOpacity>
 
