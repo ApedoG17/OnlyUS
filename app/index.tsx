@@ -1,8 +1,3 @@
-import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
-import { FontAwesome } from '@expo/vector-icons';
-import { Globe, Link2, LogOut, Mail, User } from 'lucide-react-native';
-import { Link, useRouter } from 'expo-router';
-import { useAuthStore } from '@/store/useAuthStore';
 import SplashScreen from '@/components/SplashScreen';
 import BuildReflect from '@/components/sections/BuildReflect';
 import CTABanner from '@/components/sections/CTABanner';
@@ -16,6 +11,11 @@ import PrivacyBadges from '@/components/sections/PrivacyBadges';
 import RelationshipSystem from '@/components/sections/RelationshipSystem';
 import StatsCounter from '@/components/sections/StatsCounter';
 import Testimonials from '@/components/sections/Testimonials';
+import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
+import { useAuthStore } from '@/store/useAuthStore';
+import { FontAwesome } from '@expo/vector-icons';
+import { Link, useRouter } from 'expo-router';
+import { Globe, Link2, LogOut, Mail, User } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -34,7 +34,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
-const HERO_TITLE = 'JUST THE TWO\nOF YOU';
+const HERO_LINE_1 = 'JUST THE TWO';
+const HERO_LINE_2 = 'OF YOU';
+const HERO_FULL = HERO_LINE_1 + HERO_LINE_2;
 const TYPING_SPEED = 65; // ms per character
 
 export default function Index() {
@@ -50,11 +52,12 @@ export default function Index() {
   const heroFade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    const fullText = HERO_LINE_1 + HERO_LINE_2;
     let i = 0;
     const interval = setInterval(() => {
       i++;
-      setTypedText(HERO_TITLE.slice(0, i));
-      if (i >= HERO_TITLE.length) {
+      setTypedText(fullText.slice(0, i));
+      if (i >= fullText.length) {
         clearInterval(interval);
         setTypingDone(true);
         // Fade in subtitle + buttons
@@ -90,13 +93,13 @@ export default function Index() {
           </View>
           {isSignedIn ? (
             <View style={{ zIndex: 100 }}>
-              <TouchableOpacity 
-                style={styles.profileBtn} 
+              <TouchableOpacity
+                style={styles.profileBtn}
                 onPress={() => setShowProfileMenu(!showProfileMenu)}
               >
                 <User color="#FAFAFA" size={20} />
               </TouchableOpacity>
-              
+
               {showProfileMenu && (
                 <View style={styles.dropdownMenu}>
                   <Link href="/connection" asChild onPress={() => setShowProfileMenu(false)}>
@@ -131,7 +134,9 @@ export default function Index() {
           >
             <View style={styles.heroOverlay}>
               <Text style={styles.heroTitle}>
-                {typedText.replace('\\n', '\n')}
+                {typedText.length <= HERO_LINE_1.length
+                  ? typedText
+                  : HERO_LINE_1 + '\n' + typedText.slice(HERO_LINE_1.length)}
                 {!typingDone && <Text style={styles.cursor}>|</Text>}
               </Text>
               <Animated.View style={{ opacity: heroFade }}>

@@ -1,7 +1,7 @@
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { Eye, Lock, Shield, ShieldBan, ShieldCheck, ZapOff } from 'lucide-react-native';
-import React from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
@@ -14,22 +14,56 @@ const BADGES = [
   { icon: <Shield color={COLOR_PALETTE.secondary} size={22} />, label: 'Safe\nBy Design' },
 ];
 
+const BADGE_WIDTH = 90 + SPACING.md; // badge width + gap
+const SET_WIDTH = BADGES.length * BADGE_WIDTH; // width of one full set
+const SCROLL_DURATION = 18000; // ms for one full loop (slower = smoother)
+
+function BadgeItem({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <View style={styles.badge}>
+      <View style={styles.iconBox}>{icon}</View>
+      <Text style={styles.badgeLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export default function PrivacyBadges() {
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animate = () => {
+      scrollX.setValue(0);
+      Animated.timing(scrollX, {
+        toValue: -SET_WIDTH,
+        duration: SCROLL_DURATION,
+        useNativeDriver: true,
+        isInteraction: false,
+      }).start(({ finished }) => {
+        if (finished) animate(); // loop forever
+      });
+    };
+    animate();
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>TRUSTED & CERTIFIED</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollRow}
-      >
-        {BADGES.map((badge, i) => (
-          <View key={i} style={styles.badge}>
-            <View style={styles.iconBox}>{badge.icon}</View>
-            <Text style={styles.badgeLabel}>{badge.label}</Text>
-          </View>
-        ))}
-      </ScrollView>
+      <View style={styles.marqueeClip}>
+        <Animated.View
+          style={[
+            styles.marqueeTrack,
+            { transform: [{ translateX: scrollX }] },
+          ]}
+        >
+          {/* Render badges twice so the second set seamlessly follows the first */}
+          {BADGES.map((badge, i) => (
+            <BadgeItem key={`a-${i}`} icon={badge.icon} label={badge.label} />
+          ))}
+          {BADGES.map((badge, i) => (
+            <BadgeItem key={`b-${i}`} icon={badge.icon} label={badge.label} />
+          ))}
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -50,8 +84,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.lg,
   },
-  scrollRow: {
-    paddingHorizontal: SPACING.xl,
+  marqueeClip: {
+    overflow: 'hidden',
+    width: '100%',
+  },
+  marqueeTrack: {
+    flexDirection: 'row',
     gap: SPACING.md,
   },
   badge: {
