@@ -1,7 +1,10 @@
+import { useScrollContext } from '@/context/ScrollContext';
+import { useEnterAnim, useInView } from '@/hooks/useInView';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { Check, X } from 'lucide-react-native';
 import React from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
@@ -22,38 +25,45 @@ const rows = [
 ];
 
 export default function ComparisonTable() {
+  const scrollOffset = useScrollContext();
+  const { onLayout, triggered } = useInView(scrollOffset);
+
+  const labelStyle  = useEnterAnim(triggered, 0,   { fromX: -24, fromY: 0 });
+  const titleStyle  = useEnterAnim(triggered, 100, { fromY: 30 });
+  const tableStyle  = useEnterAnim(triggered, 250, { fromX: 50, fromY: 0, fromScale: 0.97 });
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.subtitle}>VS THE REST</Text>
-      <Text style={styles.title}>Why OnlyUs Wins</Text>
+    <View style={styles.container} onLayout={onLayout}>
+      <Animated.Text style={[styles.subtitle, labelStyle]}>VS THE REST</Animated.Text>
+      <Animated.Text style={[styles.title,    titleStyle]}>Why OnlyUs Wins</Animated.Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View>
-          {/* Header row */}
-          <View style={styles.headerRow}>
-            <Text style={[styles.featureCell, styles.headerText]}>Feature</Text>
-            <View style={[styles.appCell, styles.highlightCol]}>
-              <Text style={[styles.headerText, { color: COLOR_PALETTE.primary }]}>OnlyUs</Text>
+      <Animated.View style={tableStyle}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View>
+            <View style={styles.headerRow}>
+              <Text style={[styles.featureCell, styles.headerText]}>Feature</Text>
+              <View style={[styles.appCell, styles.highlightCol]}>
+                <Text style={[styles.headerText, { color: COLOR_PALETTE.primary }]}>OnlyUs</Text>
+              </View>
+              <View style={styles.appCell}>
+                <Text style={[styles.headerText, { color: COLOR_PALETTE.textMuted }]}>WhatsApp</Text>
+              </View>
+              <View style={styles.appCell}>
+                <Text style={[styles.headerText, { color: COLOR_PALETTE.textMuted }]}>Snapchat</Text>
+              </View>
             </View>
-            <View style={styles.appCell}>
-              <Text style={[styles.headerText, { color: COLOR_PALETTE.textMuted }]}>WhatsApp</Text>
-            </View>
-            <View style={styles.appCell}>
-              <Text style={[styles.headerText, { color: COLOR_PALETTE.textMuted }]}>Snapchat</Text>
-            </View>
+
+            {rows.map((row, i) => (
+              <View key={i} style={[styles.dataRow, i % 2 === 0 && styles.altRow]}>
+                <Text style={styles.featureCell}>{row.feature}</Text>
+                <View style={[styles.appCell, styles.highlightCol]}>{row.onlyus}</View>
+                <View style={styles.appCell}>{row.whatsapp}</View>
+                <View style={styles.appCell}>{row.snap}</View>
+              </View>
+            ))}
           </View>
-
-          {/* Data rows */}
-          {rows.map((row, i) => (
-            <View key={i} style={[styles.dataRow, i % 2 === 0 && styles.altRow]}>
-              <Text style={styles.featureCell}>{row.feature}</Text>
-              <View style={[styles.appCell, styles.highlightCol]}>{row.onlyus}</View>
-              <View style={styles.appCell}>{row.whatsapp}</View>
-              <View style={styles.appCell}>{row.snap}</View>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </Animated.View>
     </View>
   );
 }

@@ -23,12 +23,14 @@ import {
   Image,
   ImageBackground,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import RNReanimated, { useAnimatedRef, useScrollOffset } from 'react-native-reanimated';
+import { ScrollContext } from '@/context/ScrollContext';
+import { useEnterAnim, useInView } from '@/hooks/useInView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -45,6 +47,23 @@ export default function Index() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const router = useRouter();
   const { isSignedIn, logout } = useAuthStore();
+
+  const scrollRef = useAnimatedRef<RNReanimated.ScrollView>();
+  const scrollOffset = useScrollOffset(scrollRef);
+
+  // ── Vault section animations ──
+  const { onLayout: onVaultLayout, triggered: vaultTriggered } = useInView(scrollOffset);
+  const vaultLabelStyle = useEnterAnim(vaultTriggered, 0,   { fromX: -24, fromY: 0 });
+  const vaultTitleStyle = useEnterAnim(vaultTriggered, 110, { fromY: 30 });
+  const vaultImageStyle = useEnterAnim(vaultTriggered, 220, { fromY: 35, fromScale: 0.96 });
+  const vaultRow0Style  = useEnterAnim(vaultTriggered, 350, { fromX: -28, fromY: 0 });
+  const vaultRow1Style  = useEnterAnim(vaultTriggered, 450, { fromX: -28, fromY: 0 });
+  const vaultRow2Style  = useEnterAnim(vaultTriggered, 550, { fromX: -28, fromY: 0 });
+  const vaultRow3Style  = useEnterAnim(vaultTriggered, 650, { fromX: -28, fromY: 0 });
+
+  // ── Commitment section animations ──
+  const { onLayout: onCommitLayout, triggered: commitTriggered } = useInView(scrollOffset);
+  const commitStyle = useEnterAnim(commitTriggered, 0, { fromY: 50, fromScale: 0.97 });
 
   // ── Typewriter state ──
   const [typedText, setTypedText] = useState('');
@@ -83,7 +102,8 @@ export default function Index() {
     <View style={styles.root}>
       {!isSplashDone && <SplashScreen onFinish={() => setIsSplashDone(true)} />}
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <RNReanimated.ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.scrollContent} scrollEventThrottle={16}>
+      <ScrollContext.Provider value={scrollOffset}>
 
         {/* ── Header ── */}
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -188,24 +208,31 @@ export default function Index() {
         <Communication />
 
         {/* ── Shared Memory Vault ── */}
-        <View style={styles.vaultSection}>
-          <Text style={styles.sectionSub}>SHARED MEMORY VAULT</Text>
-          <Text style={styles.sectionTitle}>A Private World,{'\n'}Just for Two</Text>
-          <Image source={require('../assets/images/memories.png')} style={styles.vaultImage} />
-          <View style={styles.vaultStats}>
-            {[
-              ['Photo & Video Storage', 'Private'],
-              ['Screenshot Block', 'Active'],
-              ['Accessible To', '2 Users Only'],
-              ['Max Users', '2'],
-            ].map(([label, val], i) => (
-              <View key={i} style={[styles.vaultRow, i === 3 && { borderBottomWidth: 0 }]}>
-                <Text style={styles.vaultLabel}>{label}</Text>
-                <Text style={styles.vaultValue}>{val}</Text>
+        {(() => {
+          const rowStyles = [vaultRow0Style, vaultRow1Style, vaultRow2Style, vaultRow3Style];
+          return (
+            <View style={styles.vaultSection} onLayout={onVaultLayout}>
+              <RNReanimated.Text style={[styles.sectionSub, vaultLabelStyle]}>SHARED MEMORY VAULT</RNReanimated.Text>
+              <RNReanimated.Text style={[styles.sectionTitle, vaultTitleStyle]}>A Private World,{'\n'}Just for Two</RNReanimated.Text>
+              <RNReanimated.View style={vaultImageStyle}>
+                <Image source={require('../assets/images/memories.png')} style={styles.vaultImage} />
+              </RNReanimated.View>
+              <View style={styles.vaultStats}>
+                {[
+                  ['Photo & Video Storage', 'Private'],
+                  ['Screenshot Block', 'Active'],
+                  ['Accessible To', '2 Users Only'],
+                  ['Max Users', '2'],
+                ].map(([label, val], i) => (
+                  <RNReanimated.View key={i} style={[styles.vaultRow, i === 3 && { borderBottomWidth: 0 }, rowStyles[i]]}>
+                    <Text style={styles.vaultLabel}>{label}</Text>
+                    <Text style={styles.vaultValue}>{val}</Text>
+                  </RNReanimated.View>
+                ))}
               </View>
-            ))}
-          </View>
-        </View>
+            </View>
+          );
+        })()}
 
         {/* ── Testimonials ── */}
         <Testimonials />
@@ -217,7 +244,7 @@ export default function Index() {
         <FooterVision />
 
         {/* ── Commitment closing image ── */}
-        <View style={styles.commitSection}>
+        <RNReanimated.View style={[styles.commitSection, commitStyle]} onLayout={onCommitLayout}>
           <View style={styles.commitText}>
             <Text style={styles.sectionSub}>COMMITMENT FIRST</Text>
             <Text style={styles.sectionTitle}>Exclusive homes for{'\n'}premium hearts</Text>
@@ -228,7 +255,7 @@ export default function Index() {
               <Text style={styles.outlineBtnTxt}>Learn Protocol</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </RNReanimated.View>
 
         {/* ── Legal Footer ── */}
         <View style={styles.footerBar}>
@@ -242,7 +269,8 @@ export default function Index() {
           <Text style={styles.footerText}>© 2026 OnlyUs Platform. All rights reserved.</Text>
         </View>
 
-      </ScrollView>
+      </ScrollContext.Provider>
+      </RNReanimated.ScrollView>
     </View>
   );
 }

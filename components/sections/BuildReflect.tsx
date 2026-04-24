@@ -1,12 +1,22 @@
+import { useScrollContext } from '@/context/ScrollContext';
+import { useEnterAnim, useInView } from '@/hooks/useInView';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { Calendar, Flame, MessageCircle, Palette, Smile } from 'lucide-react-native';
 import React from 'react';
 import { Dimensions, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function BuildReflect() {
+  const scrollOffset = useScrollContext();
+  const { onLayout, triggered } = useInView(scrollOffset);
+
+  const labelStyle   = useEnterAnim(triggered, 0,   { fromX: -24, fromY: 0 });
+  const titleStyle   = useEnterAnim(triggered, 100, { fromY: 30 });
+  const cardsStyle   = useEnterAnim(triggered, 220, { fromY: 40, fromScale: 0.97 });
+
   const cards = [
     {
       title: 'Daily Prompts',
@@ -41,29 +51,31 @@ export default function BuildReflect() {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={onLayout}>
       <View style={styles.headerStack}>
-        <Text style={styles.headerSubtitle}>ADVANCED ECOSYSTEM</Text>
-        <Text style={styles.headerTitle}>Build & Reflect</Text>
+        <Animated.Text style={[styles.headerSubtitle, labelStyle]}>ADVANCED ECOSYSTEM</Animated.Text>
+        <Animated.Text style={[styles.headerTitle,    titleStyle]}>Build & Reflect</Animated.Text>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        snapToInterval={width * 0.75 + SPACING.lg}
-        decelerationRate="fast"
-      >
-        {cards.map((card, index) => (
-          <View key={index} style={[styles.card, { borderTopColor: card.color }]}>
-            <View style={[styles.iconBox, { backgroundColor: card.color }]}>
-              {card.icon}
+      <Animated.View style={cardsStyle}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          snapToInterval={width * 0.75 + SPACING.lg}
+          decelerationRate="fast"
+        >
+          {cards.map((card, index) => (
+            <View key={index} style={[styles.card, { borderTopColor: card.color }]}>
+              <View style={[styles.iconBox, { backgroundColor: card.color }]}>
+                {card.icon}
+              </View>
+              <Text style={styles.cardTitle}>{card.title}</Text>
+              <Text style={styles.cardDesc}>{card.desc}</Text>
             </View>
-            <Text style={styles.cardTitle}>{card.title}</Text>
-            <Text style={styles.cardDesc}>{card.desc}</Text>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      </Animated.View>
     </View>
   );
 }

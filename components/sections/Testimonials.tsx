@@ -1,6 +1,9 @@
+import { useScrollContext } from '@/context/ScrollContext';
+import { useEnterAnim, useInView } from '@/hooks/useInView';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import React from 'react';
 import { Dimensions, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
@@ -33,37 +36,43 @@ const TESTIMONIALS = [
 ];
 
 export default function Testimonials() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.subtitle}>REAL COUPLES</Text>
-      <Text style={styles.title}>Stories That Matter</Text>
+  const scrollOffset = useScrollContext();
+  const { onLayout, triggered } = useInView(scrollOffset);
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        snapToInterval={width * 0.82 + SPACING.lg}
-        decelerationRate="fast"
-      >
-        {TESTIMONIALS.map((t, i) => (
-          <View key={i} style={[styles.card, { borderTopColor: t.color }]}>
-            {/* Quote mark */}
-            <Text style={[styles.quoteMark, { color: t.color }]}>"</Text>
-            <Text style={styles.quoteText}>{t.quote}</Text>
-            <View style={styles.author}>
-              <View style={[styles.avatar, { backgroundColor: t.color + '30', borderColor: t.color }]}>
-                <Text style={[styles.avatarText, { color: t.color }]}>
-                  {t.name.charAt(0)}
-                </Text>
-              </View>
-              <View>
-                <Text style={styles.name}>{t.name}</Text>
-                <Text style={styles.since}>{t.since}</Text>
+  const labelStyle = useEnterAnim(triggered, 0,   { fromX: -24, fromY: 0 });
+  const titleStyle = useEnterAnim(triggered, 100, { fromY: 30 });
+  const cardsStyle = useEnterAnim(triggered, 240, { fromY: 40, fromScale: 0.97 });
+
+  return (
+    <View style={styles.container} onLayout={onLayout}>
+      <Animated.Text style={[styles.subtitle, labelStyle]}>REAL COUPLES</Animated.Text>
+      <Animated.Text style={[styles.title,    titleStyle]}>Stories That Matter</Animated.Text>
+
+      <Animated.View style={cardsStyle}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          snapToInterval={width * 0.82 + SPACING.lg}
+          decelerationRate="fast"
+        >
+          {TESTIMONIALS.map((t, i) => (
+            <View key={i} style={[styles.card, { borderTopColor: t.color }]}>
+              <Text style={[styles.quoteMark, { color: t.color }]}>"</Text>
+              <Text style={styles.quoteText}>{t.quote}</Text>
+              <View style={styles.author}>
+                <View style={[styles.avatar, { backgroundColor: t.color + '30', borderColor: t.color }]}>
+                  <Text style={[styles.avatarText, { color: t.color }]}>{t.name.charAt(0)}</Text>
+                </View>
+                <View>
+                  <Text style={styles.name}>{t.name}</Text>
+                  <Text style={styles.since}>{t.since}</Text>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      </Animated.View>
     </View>
   );
 }

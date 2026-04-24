@@ -1,13 +1,43 @@
+import { useScrollContext } from '@/context/ScrollContext';
+import { useEnterAnim, useInView } from '@/hooks/useInView';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { Bell, EyeOff, Mic, ShieldAlert, TextQuote } from 'lucide-react-native';
 import React from 'react';
 import { Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
+interface FeatureItemProps {
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+  triggered: boolean;
+  delay: number;
+  isLargeScreen: boolean;
+}
+
+function FeatureItem({ title, desc, icon, triggered, delay, isLargeScreen }: FeatureItemProps) {
+  const animStyle = useEnterAnim(triggered, delay, { fromX: -30, fromY: 0 });
+  return (
+    <Animated.View style={[styles.card, isLargeScreen && styles.cardLarge, animStyle]}>
+      <View style={styles.iconWrapper}>{icon}</View>
+      <View style={styles.textStack}>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.desc}>{desc}</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
 export default function Communication() {
+  const scrollOffset = useScrollContext();
+  const { onLayout, triggered } = useInView(scrollOffset);
   const isLargeScreen = width > 768;
+
+  const labelStyle = useEnterAnim(triggered, 0,   { fromX: -24, fromY: 0 });
+  const titleStyle = useEnterAnim(triggered, 100, { fromY: 30 });
 
   const features = [
     {
@@ -17,7 +47,7 @@ export default function Communication() {
     },
     {
       title: 'Voice Notes',
-      desc: 'Send and receive secure, high-fidelity audio messages for when words aren\'t enough.',
+      desc: "Send and receive secure, high-fidelity audio messages for when words aren't enough.",
       icon: <Mic color={COLOR_PALETTE.primary} size={24} />,
     },
     {
@@ -38,19 +68,19 @@ export default function Communication() {
   ];
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerSubtitle}>FOCUSED INTERACTION</Text>
-      <Text style={styles.headerTitle}>Safe & Private Chat</Text>
+    <View style={styles.container} onLayout={onLayout}>
+      <Animated.Text style={[styles.headerSubtitle, labelStyle]}>FOCUSED INTERACTION</Animated.Text>
+      <Animated.Text style={[styles.headerTitle,    titleStyle]}>Safe & Private Chat</Animated.Text>
 
       <View style={[styles.grid, isLargeScreen && styles.gridLarge]}>
-        {features.map((item, index) => (
-          <View key={index} style={[styles.card, isLargeScreen && styles.cardLarge]}>
-            <View style={styles.iconWrapper}>{item.icon}</View>
-            <View style={styles.textStack}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.desc}>{item.desc}</Text>
-            </View>
-          </View>
+        {features.map((item, i) => (
+          <FeatureItem
+            key={i}
+            {...item}
+            triggered={triggered}
+            delay={200 + i * 110}
+            isLargeScreen={isLargeScreen}
+          />
         ))}
       </View>
     </View>

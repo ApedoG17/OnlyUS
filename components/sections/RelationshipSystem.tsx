@@ -1,7 +1,10 @@
+import { useScrollContext } from '@/context/ScrollContext';
+import { useEnterAnim, useInView } from '@/hooks/useInView';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
-import { AlertTriangle, Clock, DownloadCloud, Link, Link2Off, Trash2 } from 'lucide-react-native';
+import { AlertTriangle, Clock, DownloadCloud, Link, Link2Off } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 const SERIF_FONT = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
@@ -11,8 +14,43 @@ if (Platform.OS === 'android') {
   }
 }
 
+interface RuleCardProps {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  content: string;
+  isExpanded: boolean;
+  onPress: () => void;
+  triggered: boolean;
+  delay: number;
+}
+
+function RuleCard({ title, icon, content, isExpanded, onPress, triggered, delay }: RuleCardProps) {
+  const animStyle = useEnterAnim(triggered, delay, { fromX: 40, fromY: 0, fromScale: 0.97 });
+  return (
+    <Animated.View style={animStyle}>
+      <TouchableOpacity
+        style={[styles.ruleCard, isExpanded && styles.ruleCardActive]}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
+        <View style={styles.ruleHeader}>
+          <View style={styles.iconWrapper}>{icon}</View>
+          <Text style={styles.ruleTitle}>{title}</Text>
+        </View>
+        {isExpanded && <Text style={styles.ruleContent}>{content}</Text>}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 export default function RelationshipSystem() {
+  const scrollOffset = useScrollContext();
+  const { onLayout, triggered } = useInView(scrollOffset);
   const [expandedId, setExpandedId] = useState<string | null>('link');
+
+  const labelStyle = useEnterAnim(triggered, 0,   { fromX: -24, fromY: 0 });
+  const titleStyle = useEnterAnim(triggered, 100, { fromY: 30 });
 
   const toggleExpand = (id: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -36,7 +74,7 @@ export default function RelationshipSystem() {
       id: 'consequences',
       title: 'The 1-Week Rule',
       icon: <Clock color={COLOR_PALETTE.primary} size={24} />,
-      content: 'Make sure it’s the right decision. If you choose to break the connection, the platform enforces a strict 7-day cooldown before you can link back to that specific person.',
+      content: "Make sure it's the right decision. If you choose to break the connection, the platform enforces a strict 7-day cooldown before you can link back to that specific person.",
     },
     {
       id: 'data',
@@ -53,30 +91,21 @@ export default function RelationshipSystem() {
   ];
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerSubtitle}>RELATIONSHIP MECHANICS</Text>
-      <Text style={styles.headerTitle}>The Rules of Engagement</Text>
+    <View style={styles.container} onLayout={onLayout}>
+      <Animated.Text style={[styles.headerSubtitle, labelStyle]}>RELATIONSHIP MECHANICS</Animated.Text>
+      <Animated.Text style={[styles.headerTitle,    titleStyle]}>The Rules of Engagement</Animated.Text>
 
       <View style={styles.accordionContainer}>
-        {rules.map((rule) => {
-          const isExpanded = expandedId === rule.id;
-          return (
-            <TouchableOpacity 
-              key={rule.id} 
-              style={[styles.ruleCard, isExpanded && styles.ruleCardActive]}
-              onPress={() => toggleExpand(rule.id)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.ruleHeader}>
-                <View style={styles.iconWrapper}>{rule.icon}</View>
-                <Text style={styles.ruleTitle}>{rule.title}</Text>
-              </View>
-              {isExpanded && (
-                <Text style={styles.ruleContent}>{rule.content}</Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+        {rules.map((rule, i) => (
+          <RuleCard
+            key={rule.id}
+            {...rule}
+            isExpanded={expandedId === rule.id}
+            onPress={() => toggleExpand(rule.id)}
+            triggered={triggered}
+            delay={200 + i * 110}
+          />
+        ))}
       </View>
     </View>
   );
@@ -86,7 +115,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.xxl,
-    backgroundColor: '#111215', // slightly offset background
+    backgroundColor: '#111215',
   },
   headerSubtitle: {
     color: COLOR_PALETTE.primary,
@@ -102,7 +131,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   accordionContainer: {
-    display: 'flex',
     flexDirection: 'column',
     gap: SPACING.md,
   },
@@ -142,6 +170,6 @@ const styles = StyleSheet.create({
     color: COLOR_PALETTE.textMuted,
     fontSize: 15,
     lineHeight: 22,
-    paddingLeft: 44 + SPACING.md, // align with text
+    paddingLeft: 44 + SPACING.md,
   },
 });

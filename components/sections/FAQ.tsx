@@ -1,7 +1,10 @@
+import { useScrollContext } from '@/context/ScrollContext';
+import { useEnterAnim, useInView } from '@/hooks/useInView';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
@@ -26,7 +29,7 @@ const FAQS = [
   },
   {
     q: 'What if my partner becomes inactive for a long time?',
-    a: 'After a set inactivity period, you will gain the option to exit the relationship unilaterally — you\'ll never be permanently trapped in a ghost connection.',
+    a: "After a set inactivity period, you will gain the option to exit the relationship unilaterally — you'll never be permanently trapped in a ghost connection.",
   },
   {
     q: 'Is the streak system mandatory?',
@@ -38,8 +41,44 @@ const FAQS = [
   },
 ];
 
+interface FAQItemProps {
+  faq: { q: string; a: string };
+  isOpen: boolean;
+  onPress: () => void;
+  triggered: boolean;
+  delay: number;
+}
+
+function FAQItem({ faq, isOpen, onPress, triggered, delay }: FAQItemProps) {
+  const animStyle = useEnterAnim(triggered, delay, { fromY: 30, fromScale: 0.98 });
+  return (
+    <Animated.View style={animStyle}>
+      <TouchableOpacity
+        style={[styles.item, isOpen && styles.itemOpen]}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
+        <View style={styles.row}>
+          <Text style={[styles.question, isOpen && { color: COLOR_PALETTE.primary }]}>
+            {faq.q}
+          </Text>
+          {isOpen
+            ? <ChevronUp color={COLOR_PALETTE.primary} size={20} />
+            : <ChevronDown color={COLOR_PALETTE.textMuted} size={20} />}
+        </View>
+        {isOpen && <Text style={styles.answer}>{faq.a}</Text>}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 export default function FAQ() {
+  const scrollOffset = useScrollContext();
+  const { onLayout, triggered } = useInView(scrollOffset);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const labelStyle = useEnterAnim(triggered, 0,   { fromX: -24, fromY: 0 });
+  const titleStyle = useEnterAnim(triggered, 100, { fromY: 30 });
 
   const toggle = (i: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -47,32 +86,20 @@ export default function FAQ() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.subtitle}>QUESTIONS WE KNOW YOU HAVE</Text>
-      <Text style={styles.title}>Frequently Asked</Text>
+    <View style={styles.container} onLayout={onLayout}>
+      <Animated.Text style={[styles.subtitle, labelStyle]}>QUESTIONS WE KNOW YOU HAVE</Animated.Text>
+      <Animated.Text style={[styles.title,    titleStyle]}>Frequently Asked</Animated.Text>
 
-      {FAQS.map((faq, i) => {
-        const isOpen = openIndex === i;
-        return (
-          <TouchableOpacity
-            key={i}
-            style={[styles.item, isOpen && styles.itemOpen]}
-            onPress={() => toggle(i)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.row}>
-              <Text style={[styles.question, isOpen && { color: COLOR_PALETTE.primary }]}>
-                {faq.q}
-              </Text>
-              {isOpen
-                ? <ChevronUp color={COLOR_PALETTE.primary} size={20} />
-                : <ChevronDown color={COLOR_PALETTE.textMuted} size={20} />
-              }
-            </View>
-            {isOpen && <Text style={styles.answer}>{faq.a}</Text>}
-          </TouchableOpacity>
-        );
-      })}
+      {FAQS.map((faq, i) => (
+        <FAQItem
+          key={i}
+          faq={faq}
+          isOpen={openIndex === i}
+          onPress={() => toggle(i)}
+          triggered={triggered}
+          delay={200 + i * 90}
+        />
+      ))}
     </View>
   );
 }

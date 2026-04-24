@@ -1,35 +1,61 @@
+import { useScrollContext } from '@/context/ScrollContext';
+import { useEnterAnim, useInView } from '@/hooks/useInView';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
-import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
-import React from 'react';
+import { Link } from 'expo-router';
+import React, { useEffect } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function CTABanner() {
-  const router = useRouter();
   const isSignedIn = useAuthStore((state) => state.isSignedIn);
 
-  const handleEnterCode = () => {
-    if (isSignedIn) {
-      router.push('/enter-code' as any);
-    } else {
-      router.push('/register' as any);
-    }
-  };
-  
+  const scrollOffset = useScrollContext();
+  const { onLayout, triggered } = useInView(scrollOffset);
+
+  const containerStyle = useEnterAnim(triggered, 0,   { fromY: 40, fromScale: 0.95 });
+  const taglineStyle   = useEnterAnim(triggered, 150, { fromY: 24 });
+  const headingStyle   = useEnterAnim(triggered, 260, { fromY: 28 });
+  const subStyle       = useEnterAnim(triggered, 370, { fromY: 24 });
+  const buttonsStyle   = useEnterAnim(triggered, 480, { fromY: 20 });
+
+  // Ambient glow pulse on the two background orbs
+  const glowPulse = useSharedValue(0.12);
+  useEffect(() => {
+    glowPulse.value = withRepeat(
+      withSequence(
+        withTiming(0.22, { duration: 2200 }),
+        withTiming(0.10, { duration: 2200 }),
+      ),
+      -1
+    );
+  }, []);
+
+  const glowLeftStyle  = useAnimatedStyle(() => ({ opacity: glowPulse.value }));
+  const glowRightStyle = useAnimatedStyle(() => ({ opacity: 0.32 - glowPulse.value }));
+
   return (
-    <View style={styles.container}>
-      <View style={styles.glowLeft} pointerEvents="none" />
-      <View style={styles.glowRight} pointerEvents="none" />
-      <Text style={styles.tagline}>YOUR STORY STARTS NOW</Text>
-      <Text style={styles.heading}>
+    <Animated.View style={[styles.container, containerStyle]} onLayout={onLayout}>
+      <Animated.View style={[styles.glowLeft,  glowLeftStyle]}  pointerEvents="none" />
+      <Animated.View style={[styles.glowRight, glowRightStyle]} pointerEvents="none" />
+
+      <Animated.Text style={[styles.tagline, taglineStyle]}>YOUR STORY STARTS NOW</Animated.Text>
+      <Animated.Text style={[styles.heading,  headingStyle]}>
         A place built{'\n'}only for two.
-      </Text>
-      <Text style={styles.sub}>
+      </Animated.Text>
+      <Animated.Text style={[styles.sub, subStyle]}>
         No noise. No crowds. Just you and the one person that matters.
-      </Text>
-      <View style={styles.buttons}>
+      </Animated.Text>
+
+      <Animated.View style={[styles.buttons, buttonsStyle]}>
         <Link href="/register" asChild>
           <TouchableOpacity style={styles.primaryBtn}>
             <Text style={styles.primaryBtnText}>Begin Your Journey</Text>
@@ -40,8 +66,8 @@ export default function CTABanner() {
             <Text style={styles.secondaryBtnText}>Enter Invite Code →</Text>
           </TouchableOpacity>
         </Link>
-      </View>
-    </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -63,7 +89,6 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 100,
     backgroundColor: COLOR_PALETTE.primary,
-    opacity: 0.12,
     left: -60,
     top: -60,
   },
@@ -73,7 +98,6 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 100,
     backgroundColor: COLOR_PALETTE.secondary,
-    opacity: 0.12,
     right: -60,
     bottom: -60,
   },
