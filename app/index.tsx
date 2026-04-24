@@ -28,11 +28,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
 export default function Index() {
+  const insets = useSafeAreaInsets();
   const [isSplashDone, setIsSplashDone] = useState(Platform.OS === 'web');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const router = useRouter();
@@ -53,7 +55,7 @@ export default function Index() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
 
         {/* ── Header ── */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <View style={styles.logoRow}>
             <Image source={require('../assets/images/logo.jpg')} style={styles.logoIcon} resizeMode="contain" />
             <Text style={styles.logoText}>OnlyUs.</Text>
@@ -224,7 +226,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.xl,
-    paddingTop: 20, /* Reduced padding since Expo might be handling status bars */
+    paddingTop: 20, /* Overridden inline with safe-area inset */
     paddingBottom: SPACING.lg,
     zIndex: 999, /* Ensure header and dropdown sit strictly above page content */
   },

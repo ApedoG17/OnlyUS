@@ -97,18 +97,31 @@ export default function Login() {
               />
             </View>
 
-            <TouchableOpacity 
-              onPress={handleLogin} 
-              activeOpacity={0.8}
-              disabled={loading}
-              style={{ marginTop: SPACING.md }}
-            >
-              <View style={[styles.gradientBtn, { backgroundColor: '#FF8A00' }]}>
-                <Text style={styles.btnText}>
-                  {loading ? 'Authenticating...' : 'Submit'}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            {Platform.OS === 'web' ? (
+              <div
+                onClick={loading ? undefined : handleLogin}
+                style={{ cursor: loading ? 'not-allowed' : 'pointer', userSelect: 'none', marginTop: SPACING.md }}
+              >
+                <View style={[styles.gradientBtn, { backgroundColor: '#FF8A00' }, loading && { opacity: 0.6 }]}>
+                  <Text style={styles.btnText}>
+                    {loading ? 'Authenticating...' : 'Submit'}
+                  </Text>
+                </View>
+              </div>
+            ) : (
+              <TouchableOpacity 
+                onPress={handleLogin} 
+                activeOpacity={0.8}
+                disabled={loading}
+                style={{ marginTop: SPACING.md }}
+              >
+                <View style={[styles.gradientBtn, { backgroundColor: '#FF8A00' }]}>
+                  <Text style={styles.btnText}>
+                    {loading ? 'Authenticating...' : 'Submit'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
             <Link href="/register" asChild>
               <TouchableOpacity style={styles.switchMode}>
