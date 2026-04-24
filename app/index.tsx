@@ -16,8 +16,9 @@ import PrivacyBadges from '@/components/sections/PrivacyBadges';
 import RelationshipSystem from '@/components/sections/RelationshipSystem';
 import StatsCounter from '@/components/sections/StatsCounter';
 import Testimonials from '@/components/sections/Testimonials';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Dimensions,
   Image,
   ImageBackground,
@@ -33,12 +34,39 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
 const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
+const HERO_TITLE = 'JUST THE TWO\nOF YOU';
+const TYPING_SPEED = 65; // ms per character
+
 export default function Index() {
   const insets = useSafeAreaInsets();
   const [isSplashDone, setIsSplashDone] = useState(Platform.OS === 'web');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const router = useRouter();
   const { isSignedIn, logout } = useAuthStore();
+
+  // ── Typewriter state ──
+  const [typedText, setTypedText] = useState('');
+  const [typingDone, setTypingDone] = useState(false);
+  const heroFade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setTypedText(HERO_TITLE.slice(0, i));
+      if (i >= HERO_TITLE.length) {
+        clearInterval(interval);
+        setTypingDone(true);
+        // Fade in subtitle + buttons
+        Animated.timing(heroFade, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }).start();
+      }
+    }, TYPING_SPEED);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleEnterCode = () => {
     if (isSignedIn) {
@@ -102,11 +130,16 @@ export default function Index() {
             imageStyle={styles.heroImgRadius}
           >
             <View style={styles.heroOverlay}>
-              <Text style={styles.heroTitle}>JUST THE TWO{'\n'}OF YOU</Text>
-              <Text style={styles.heroSub}>
-                OnlyUs is a private, relationship-focused mobile app designed exclusively for two. A secure and emotionally engaging digital space where couples communicate, build memories, and grow — without external distractions.
+              <Text style={styles.heroTitle}>
+                {typedText.replace('\\n', '\n')}
+                {!typingDone && <Text style={styles.cursor}>|</Text>}
               </Text>
-              <View style={styles.heroActions}>
+              <Animated.View style={{ opacity: heroFade }}>
+                <Text style={styles.heroSub}>
+                  OnlyUs is a private, relationship-focused mobile app designed exclusively for two. A secure and emotionally engaging digital space where couples communicate, build memories, and grow — without external distractions.
+                </Text>
+              </Animated.View>
+              <Animated.View style={[styles.heroActions, { opacity: heroFade }]}>
                 <Link href={isSignedIn ? '/connection' : '/register'} asChild>
                   <TouchableOpacity style={styles.primaryBtn}>
                     <Text style={styles.primaryBtnTxt}>{isSignedIn ? 'Resume Connection' : 'Begin Journey'}</Text>
@@ -117,7 +150,7 @@ export default function Index() {
                     <Text style={styles.ghostBtnTxt}>Enter Code →</Text>
                   </TouchableOpacity>
                 </Link>
-              </View>
+              </Animated.View>
             </View>
           </ImageBackground>
         </View>
@@ -327,6 +360,10 @@ const styles = StyleSheet.create({
     lineHeight: 50,
     marginBottom: SPACING.md,
     letterSpacing: 0.5,
+  },
+  cursor: {
+    color: COLOR_PALETTE.primary,
+    fontWeight: '300',
   },
   heroSub: {
     color: '#E0E0E0',
