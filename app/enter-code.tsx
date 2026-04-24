@@ -2,6 +2,7 @@ import AuthBackground from '@/components/AuthBackground';
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, KeyRound } from 'lucide-react-native';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -71,11 +72,13 @@ export default function EnterCode() {
         style={styles.keyboardAware}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ArrowLeft color="#FAFAFA" size={24} />
-          </TouchableOpacity>
+          <Link href="../" asChild>
+            <TouchableOpacity style={styles.backBtn}>
+              <ArrowLeft color="#FAFAFA" size={24} />
+            </TouchableOpacity>
+          </Link>
 
           <View style={styles.headerBlock}>
             <Text style={styles.subText}>SECURE HANDSHAKE</Text>

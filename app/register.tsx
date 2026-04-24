@@ -3,6 +3,7 @@ import { RADIUS, SPACING } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { ArrowLeft, Globe, Mail } from 'lucide-react-native';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -42,11 +43,13 @@ export default function Register() {
         style={styles.keyboardAware}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ArrowLeft color="#FAFAFA" size={24} />
-          </TouchableOpacity>
+          <Link href="../" asChild>
+            <TouchableOpacity style={styles.backBtn}>
+              <ArrowLeft color="#FAFAFA" size={24} />
+            </TouchableOpacity>
+          </Link>
 
           {/* Top Header Text */}
           <View style={styles.headerBlock}>
@@ -89,25 +92,22 @@ export default function Register() {
               />
             </View>
 
-            <TouchableOpacity 
-              onPress={handleRegister} 
+            <TouchableOpacity
+              onPress={handleRegister}
               activeOpacity={0.8}
               disabled={loading}
-              style={{ marginTop: SPACING.md }}
+              style={[styles.gradientBtn, { backgroundColor: '#FF8A00', marginTop: SPACING.md }]}
             >
-              <View style={[styles.gradientBtn, { backgroundColor: '#FF8A00' }]}>
-                <Text style={styles.btnText}>
-                  {loading ? 'Processing...' : 'Submit'}
-                </Text>
-              </View>
+              <Text style={styles.btnText}>
+                {loading ? 'Processing...' : 'Submit'}
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.switchMode} 
-              onPress={() => router.push('/login' as any)}
-            >
-              <Text style={styles.switchModeText}>Already have an account? Sign in</Text>
-            </TouchableOpacity>
+            <Link href="/login" asChild>
+              <TouchableOpacity style={styles.switchMode}>
+                <Text style={styles.switchModeText}>Already have an account? Sign in</Text>
+              </TouchableOpacity>
+            </Link>
 
             <View style={styles.socialRow}>
               <TouchableOpacity style={styles.socialIcon}><FontAwesome name="twitter" color="#FAFAFA" size={20} /></TouchableOpacity>

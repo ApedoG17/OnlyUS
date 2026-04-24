@@ -16,20 +16,20 @@ export default function AuthBackground({ children }: AuthBackgroundProps) {
       {/* Floating geometric shapes */}
       
       {/* Top right rotated pill */}
-      <View style={[styles.shape, styles.pillTopRight]} />
+      <View style={[styles.shape, styles.pillTopRight]} pointerEvents="none" />
       
       {/* Top left vertical lines */}
-      <View style={[styles.line, { left: 40, top: -20, height: 160 }]} />
-      <View style={[styles.line, { left: 60, top: -40, height: 180 }]} />
+      <View style={[styles.line, { left: 40, top: -20, height: 160 }]} pointerEvents="none" />
+      <View style={[styles.line, { left: 60, top: -40, height: 180 }]} pointerEvents="none" />
 
       {/* Center abstract circle/snake shape (simplified as rings for RN) */}
-      <View style={[styles.ring, styles.ringCenter]} />
+      <View style={[styles.ring, styles.ringCenter]} pointerEvents="none" />
       
       {/* Bottom giant ghost triangle/square */}
-      <View style={[styles.diamond, styles.diamondBottomLeft]} />
+      <View style={[styles.diamond, styles.diamondBottomLeft]} pointerEvents="none" />
 
       {/* Main Content overlay */}
-      <View style={StyleSheet.absoluteFill}>
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         {children}
       </View>
     </View>

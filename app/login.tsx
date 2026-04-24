@@ -4,6 +4,7 @@ import { RADIUS, SPACING } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { ArrowLeft, MessageCircle } from 'lucide-react-native';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -46,12 +47,14 @@ export default function Login() {
         style={styles.keyboardAware}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
           {/* Quick back route for demo, usually no back button on straight login pages if root */}
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/')}>
-            <ArrowLeft color="#FAFAFA" size={24} />
-          </TouchableOpacity>
+          <Link href="/" asChild>
+            <TouchableOpacity style={styles.backBtn}>
+              <ArrowLeft color="#FAFAFA" size={24} />
+            </TouchableOpacity>
+          </Link>
 
           {/* Top Header Text */}
           <View style={styles.headerBlock}>
@@ -107,12 +110,11 @@ export default function Login() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.switchMode} 
-              onPress={() => router.push('/register' as any)}
-            >
-              <Text style={styles.switchModeText}>Don't have an account? Register</Text>
-            </TouchableOpacity>
+            <Link href="/register" asChild>
+              <TouchableOpacity style={styles.switchMode}>
+                <Text style={styles.switchModeText}>Don't have an account? Register</Text>
+              </TouchableOpacity>
+            </Link>
 
             <View style={styles.socialRow}>
               <TouchableOpacity style={styles.socialIcon}><FontAwesome name="facebook" color="#FAFAFA" size={20} /></TouchableOpacity>

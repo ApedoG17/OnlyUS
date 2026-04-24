@@ -1,7 +1,7 @@
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
 import { FontAwesome } from '@expo/vector-icons';
 import { Globe, Link2, LogOut, Mail, User } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
 import SplashScreen from '@/components/SplashScreen';
 import BuildReflect from '@/components/sections/BuildReflect';
@@ -69,10 +69,12 @@ export default function Index() {
               
               {showProfileMenu && (
                 <View style={styles.dropdownMenu}>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileMenu(false); router.push('/connection' as any); }}>
-                    <Link2 color="#FAFAFA" size={16} />
-                    <Text style={styles.dropdownText}>Connection Node</Text>
-                  </TouchableOpacity>
+                  <Link href="/connection" asChild onPress={() => setShowProfileMenu(false)}>
+                    <TouchableOpacity style={styles.dropdownItem}>
+                      <Link2 color="#FAFAFA" size={16} />
+                      <Text style={styles.dropdownText}>Connection Node</Text>
+                    </TouchableOpacity>
+                  </Link>
                   <View style={styles.dropdownDivider} />
                   <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileMenu(false); logout(); }}>
                     <LogOut color="#FF5E5E" size={16} />
@@ -82,9 +84,11 @@ export default function Index() {
               )}
             </View>
           ) : (
-            <TouchableOpacity style={styles.headerBtn} onPress={() => router.push('/register' as any)}>
-              <Text style={styles.headerBtnText}>Get Started</Text>
-            </TouchableOpacity>
+            <Link href="/register" asChild>
+              <TouchableOpacity style={styles.headerBtn}>
+                <Text style={styles.headerBtnText}>Get Started</Text>
+              </TouchableOpacity>
+            </Link>
           )}
         </View>
 
@@ -101,15 +105,16 @@ export default function Index() {
                 OnlyUs is a private, relationship-focused mobile app designed exclusively for two. A secure and emotionally engaging digital space where couples communicate, build memories, and grow — without external distractions.
               </Text>
               <View style={styles.heroActions}>
-                <TouchableOpacity 
-                  style={styles.primaryBtn} 
-                  onPress={() => router.push((isSignedIn ? '/connection' : '/register') as any)}
-                >
-                  <Text style={styles.primaryBtnTxt}>{isSignedIn ? 'Resume Connection' : 'Begin Journey'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.ghostBtn} onPress={handleEnterCode}>
-                  <Text style={styles.ghostBtnTxt}>Enter Code →</Text>
-                </TouchableOpacity>
+                <Link href={isSignedIn ? '/connection' : '/register'} asChild>
+                  <TouchableOpacity style={styles.primaryBtn}>
+                    <Text style={styles.primaryBtnTxt}>{isSignedIn ? 'Resume Connection' : 'Begin Journey'}</Text>
+                  </TouchableOpacity>
+                </Link>
+                <Link href={isSignedIn ? '/enter-code' : '/register'} asChild>
+                  <TouchableOpacity style={styles.ghostBtn}>
+                    <Text style={styles.ghostBtnTxt}>Enter Code →</Text>
+                  </TouchableOpacity>
+                </Link>
               </View>
             </View>
           </ImageBackground>

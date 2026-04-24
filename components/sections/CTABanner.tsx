@@ -1,5 +1,5 @@
 import { COLOR_PALETTE, RADIUS, SPACING } from '@/constants/theme';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -20,8 +20,8 @@ export default function CTABanner() {
   
   return (
     <View style={styles.container}>
-      <View style={styles.glowLeft} />
-      <View style={styles.glowRight} />
+      <View style={styles.glowLeft} pointerEvents="none" />
+      <View style={styles.glowRight} pointerEvents="none" />
       <Text style={styles.tagline}>YOUR STORY STARTS NOW</Text>
       <Text style={styles.heading}>
         A place built{'\n'}only for two.
@@ -30,12 +30,16 @@ export default function CTABanner() {
         No noise. No crowds. Just you and the one person that matters.
       </Text>
       <View style={styles.buttons}>
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/register' as any)}>
-          <Text style={styles.primaryBtnText}>Begin Your Journey</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryBtn} onPress={handleEnterCode}>
-          <Text style={styles.secondaryBtnText}>Enter Invite Code →</Text>
-        </TouchableOpacity>
+        <Link href="/register" asChild>
+          <TouchableOpacity style={styles.primaryBtn}>
+            <Text style={styles.primaryBtnText}>Begin Your Journey</Text>
+          </TouchableOpacity>
+        </Link>
+        <Link href={isSignedIn ? '/enter-code' : '/register'} asChild>
+          <TouchableOpacity style={styles.secondaryBtn}>
+            <Text style={styles.secondaryBtnText}>Enter Invite Code →</Text>
+          </TouchableOpacity>
+        </Link>
       </View>
     </View>
   );
